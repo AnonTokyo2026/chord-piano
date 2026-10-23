@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>88鍵標準鋼琴與和弦工作室</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #090d16;
+            color: #e9eaf0;
+        }
+        .piano-container {
+            scrollbar-width: thin;
+            scrollbar-color: #4b5563 #1f2937;
+            scroll-behavior: auto;
+        }
+        .piano-container::-webkit-scrollbar {
+            height: 8px;
+        }
+        .piano-container::-webkit-scrollbar-track {
+            background: #1f2937;
+            border-radius: 4px;
+        }
+        .piano-container::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+        /* 隱藏下方鋼琴容器的卷軸條 */
+        .no-scrollbar {
+            scrollbar-width: none; /* Firefox */
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        /* 鎖定時禁用水平捲動 */
+        .locked-scroll {
+            overflow-x: hidden !important;
+        }
+        /* 從根源禁用所有互動元件的觸控預設手勢、長按選單與文字選取 */
+        .no-touch-action, .piano-key, #chordGridContainer button {
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        /* Custom Popover Styling for Synthesizer */
+        .popover {
+            position: absolute;
+            background: #1c1e26;
+            border: 1px solid #2e3140;
+            border-radius: 10px;
+            width: 300px;
+            height: 480px;
+            min-width: 250px;
+            min-height: 200px;
+            box-shadow: 0 16px 40px rgba(0,0,0,.7);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            resize: both;
+            user-select: none;
+            z-index: 50;
+        }
+        .popover.open {
+            display: flex;
+        }
+        .popover-dragbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 14px;
+            background: #14151a;
+            border-bottom: 1px solid #2e3140;
+            font-size: 11px;
+            color: #8a8d9f;
+            cursor: move;
+        }
+        .popover-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-bottom: 1px solid #2e3140;
+            font-size: 12px;
+            flex-shrink: 0;
+            background: #1c1e26;
+            color: #e9eaf0;
+        }
+        .close-synth {
+            cursor: pointer;
+            color: #8a8d9f;
+        }
+        .close-synth:hover {
+            color: #e9eaf0;
+        }
+        .synth-content {
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        .synth-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 11px;
+            color: #8a8d9f;
+            width: 100%;
+        }
+        .synth-row-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        .synth-val-unit {
+            white-space: nowrap;
+        }
+        .synth-row select, .synth-row input {
+            background: #090d16;
+            border: 1px solid #2e3140;
+            color: #e9eaf0;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-size: 12px;
+            width: 100%;
+        }
+        .synth-row input[type=range] {
+            width: 100%;
+            accent-color: #4f8ff7;
+            padding: 0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
+
+    <header class="w-full border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-30">
+        <div class="w-full px-3 sm:px-4 h-auto py-2 flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center space-x-2">
+                <div class="w-5 h-5 rounded-md bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-md shadow-indigo-500/30">
+                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2Z"/>
+                    </svg>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <h1 class="text-xs sm:text-sm font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
+                        88鍵鋼琴工作室
+                    </h1>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-2 sm:space-x-3 flex-wrap">
+                <!-- Transpose Control (移調: 全域半音平移) -->
+                <div class="flex items-center space-x-1 bg-slate-800/80 border border-slate-700/80 px-2 py-0.5 rounded text-[11px]">
+                    <span class="text-slate-400">移調:</span>
+                    <button onclick="stepTranspose(-1)" title="降半音 (-1)" class="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded font-mono border border-slate-700 transition-colors">◀</button>
+                    <span id="transposeDisplay" class="text-indigo-300 font-mono w-9 text-center">0 ♯</span>
+                    <button onclick="stepTranspose(1)" title="升半音 (+1)" class="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded font-mono border border-slate-700 transition-colors">▶</button>
+                </div>
+
+                <!-- Note Display Mode Selector -->
+                <div class="flex items-center space-x-1 bg-slate-800/80 border border-slate-700/80 px-2 py-0.5 rounded text-[11px]">
+                    <span class="text-slate-400">顯示:</span>
+                    <select id="noteDisplaySelect" class="bg-slate-900 text-slate-200 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-indigo-500 cursor-pointer">
+                        <option value="sharp">音名(♯)</option>
+                        <option value="flat">音名(♭)</option>
+                        <option value="degree">級數</option>
+                    </select>
+                </div>
+
+                <!-- Key Root Selector (Resident in Toolbar) -->
+                <div id="keySelectWrapper" class="flex items-center space-x-1 bg-slate-800/80 border border-slate-700/80 px-2 py-0.5 rounded text-[11px]">
+                    <span class="text-slate-400">調性:</span>
+                    <select id="keyRootSelect" class="bg-slate-900 text-slate-200 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-indigo-500 cursor-pointer">
+                        <option value="0">C</option>
+                        <option value="1">C♯ / D♭</option>
+                        <option value="2">D</option>
+                        <option value="3">D♯ / E♭</option>
+                        <option value="4">E</option>
+                        <option value="5">F</option>
+                        <option value="6">F♯ / G♭</option>
+                        <option value="7">G</option>
+                        <option value="8">G♯ / A♭</option>
+                        <option value="9">A</option>
+                        <option value="10">A♯ / B♭</option>
+                        <option value="11">B</option>
+                    </select>
+                </div>
+
+                <!-- Master Volume Slider Control in Toolbar -->
+                <div class="hidden md:flex items-center space-x-1.5 bg-slate-800/80 border border-slate-700/80 px-2 py-0.5 rounded text-[11px]">
+                    <span class="text-slate-400">🔊</span>
+                    <span class="text-slate-300">音量</span>
+                    <input type="range" id="masterVolume" min="0" max="1" step="0.05" value="0.7" class="w-14 accent-indigo-500 cursor-pointer">
+                    <span id="masterVolumeVal" class="text-indigo-300 font-mono w-7 text-right">0.7</span>
+                </div>
+
+                <!-- Synthesizer Popover Toggle Button -->
+                <button id="toggleSynthBtn" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 text-[11px] font-medium px-2 py-1 rounded transition-all shadow-sm flex items-center space-x-1">
+                    <span>🎛 合成器</span>
+                </button>
+
+                <button id="toggleAudioBtn" onclick="toggleAudioContext()" class="bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-[11px] font-medium px-2.5 py-1 rounded transition-all shadow-sm shadow-indigo-600/30 flex items-center space-x-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                    <span id="audioStatusText">啟用聲音</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Floating Synthesizer Controls Popover Panel -->
+    <div id="synthPopover" class="popover">
+        <div id="synthDragbar" class="popover-dragbar">
+            <span>🎛 合成器控制面板</span>
+            <span class="text-xs">:::</span>
+        </div>
+        <div class="popover-top">
+            <span class="font-semibold text-indigo-400">音色與 ADSR 包絡設定</span>
+            <span id="closeSynth" class="close-synth font-bold text-base hover:text-red-400 cursor-pointer">✕</span>
+        </div>
+        <div class="synth-content">
+            <div class="synth-row">
+                <label for="synthWave">波形 (Oscillator Waveform)</label>
+                <select id="synthWave">
+                    <option value="triangle" selected>三角波 (Triangle)</option>
+                    <option value="sine">正弦波 (Sine)</option>
+                    <option value="sawtooth">鋸齒波 (Sawtooth)</option>
+                    <option value="square">方波 (Square)</option>
+                </select>
+            </div>
+
+            <div class="synth-row">
+                <div class="synth-row-header">
+                    <label for="synthCutoff">濾波器截止頻率 (Cutoff)</label>
+                    <span class="synth-val-unit"><span id="synthCutoffVal">8000</span> Hz</span>
+                </div>
+                <input type="range" id="synthCutoff" min="100" max="15000" step="100" value="8000">
+            </div>
+
+            <div class="synth-row">
+                <div class="synth-row-header">
+                    <label for="synthResonance">諧振/Q值 (Resonance)</label>
+                    <span id="synthResonanceVal">1</span>
+                </div>
+                <input type="range" id="synthResonance" min="0.1" max="20" step="0.1" value="1">
+            </div>
+
+            <div class="synth-row">
+                <div class="synth-row-header">
+                    <label for="synthAttack">起音時間 (Attack)</label>
+                    <span class="synth-val-unit"><span id="synthAttackVal">0.02</span> s</span>
+                </div>
+                <input type="range" id="synthAttack" min="0.005" max="2" step="0.01" value="0.02">
+            </div>
+
+            <div class="synth-row">
+                <div class="synth-row-header">
+                    <label for="synthDecay">衰減時間 (Decay)</label>
+                    <span class="synth-val-unit"><span id="synthDecayVal">0.15</span> s</span>
+                </div>
+                <input type="range" id="synthDecay" min="0.01" max="2" step="0.01" value="0.15">
+            </div>
+
+            <div class="synth-row">
+                <div class="synth-row-header">
+                    <label for="synthSustain">延音位準 (Sustain)</label>
+                    <span id="synthSustainVal">0.6</span>
+                </div>
+                <input type="range" id="synthSustain" min="0" max="1" step="0.05" value="0.6">
+            </div>
+
+            <div class="synth-row">
+                <div class="synth-row-header">
+                    <label for="synthRelease">釋音時間 (Release)</label>
+                    <span class="synth-val-unit"><span id="synthReleaseVal">0.25</span> s</span>
+                </div>
+                <input type="range" id="synthRelease" min="0.01" max="3" step="0.05" value="0.25">
+            </div>
+        </div>
+    </div>
+
+    <main class="w-full px-2 sm:px-3 py-2 sm:py-3 flex-1 flex flex-col gap-2.5">
+
+        <!-- Top Section: Unified Chord Grid (Always Visible) -->
+        <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-2 backdrop-blur-xl shadow-xl w-full">
+            <div id="chordGridContainer" class="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+                <!-- Chords rendered via JS -->
+            </div>
+        </div>
+
+        <!-- Bottom Section: 88-Key Piano Keyboard with Integrated Toolbar Header -->
+        <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-2 sm:p-2.5 backdrop-blur-xl shadow-xl flex flex-col items-center gap-1.5 w-full">
+            
+            <!-- Piano Header Toolbar: Four Modes, Q/Z Group Offsets, and Lock Control -->
+            <div class="w-full flex items-center justify-between flex-wrap gap-1.5 pb-1.5 border-b border-slate-800/80">
+                <!-- Modes Group -->
+                <div class="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                    <span class="text-xs text-slate-400 font-medium mr-1">模式:</span>
+                    <div id="modeButtonsContainer" class="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                        <!-- Mode buttons rendered via JS -->
+                    </div>
+                </div>
+
+                <!-- Right Controls: White Key Group Offsets (Q/Z) & Lock Scroll Button -->
+                <div class="flex items-center space-x-2 flex-wrap gap-y-1">
+                    <!-- Keyboard Map Offset: Q Group (High/Mid Octaves) -->
+                    <div class="flex items-center space-x-1 bg-slate-800/80 border border-indigo-900/60 px-2 py-0.5 rounded text-[11px]">
+                        <span class="text-indigo-300 font-medium">Q列平移</span>
+                        <button onclick="stepKeyOffset('q', -1)" title="向左平移 1 個白鍵" class="px-1.5 py-0.5 bg-slate-800 hover:bg-indigo-900/50 text-indigo-200 rounded font-mono border border-slate-700 transition-colors">◀</button>
+                        <span id="qOffsetDisplay" class="text-indigo-300 font-mono w-7 text-center">0</span>
+                        <button onclick="stepKeyOffset('q', 1)" title="向右平移 1 個白鍵" class="px-1.5 py-0.5 bg-slate-800 hover:bg-indigo-900/50 text-indigo-200 rounded font-mono border border-slate-700 transition-colors">▶</button>
+                        <button onclick="resetKeyOffset('q')" title="重置為 0" class="px-1 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-400 text-[10px] rounded border border-slate-700">↺</button>
+                    </div>
+
+                    <!-- Keyboard Map Offset: Z Group (Lower Octaves) -->
+                    <div class="flex items-center space-x-1 bg-slate-800/80 border border-emerald-900/60 px-2 py-0.5 rounded text-[11px]">
+                        <span class="text-emerald-300 font-medium">Z列平移</span>
+                        <button onclick="stepKeyOffset('z', -1)" title="向左平移 1 個白鍵" class="px-1.5 py-0.5 bg-slate-800 hover:bg-emerald-900/50 text-emerald-200 rounded font-mono border border-slate-700 transition-colors">◀</button>
+                        <span id="zOffsetDisplay" class="text-emerald-300 font-mono w-7 text-center">0</span>
+                        <button onclick="stepKeyOffset('z', 1)" title="向右平移 1 個白鍵" class="px-1.5 py-0.5 bg-slate-800 hover:bg-emerald-900/50 text-emerald-200 rounded font-mono border border-slate-700 transition-colors">▶</button>
+                        <button onclick="resetKeyOffset('z')" title="重置為 0" class="px-1 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-400 text-[10px] rounded border border-slate-700">↺</button>
+                    </div>
+
+                    <!-- Lock Scroll Toggle Button -->
+                    <button id="toggleLockBtn" onclick="toggleLockScroll()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 text-[11px] font-medium px-2 py-1 rounded transition-all shadow-sm flex items-center space-x-1">
+                        <span id="lockIcon">🔓</span>
+                        <span id="lockStatusText">解鎖</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Synchronized Top Horizontal Scrollbar -->
+            <div id="topScrollContainer" class="w-full overflow-x-auto piano-container h-2.5 my-0.5">
+                <div id="topScrollContent" style="height: 1px;"></div>
+            </div>
+
+            <!-- Piano Keyboard Wrapper -->
+            <div id="pianoScrollWrapper" class="w-full overflow-x-auto no-scrollbar py-0 px-0.5 flex justify-start select-none">
+                <div id="pianoKeyboard" class="relative flex select-none bg-slate-950 pt-0 pb-1 px-1 rounded-lg border border-slate-800 shadow-2xl">
+                    <!-- Keys generated dynamically (88 keys) -->
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+        // --- Music Theory Data ---
+        const NOTES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const NOTES_FLAT = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'];
+        const DEGREE_NAMES = ['1', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7'];
+
+        const START_MIDI = 21; // A0
+        const NUM_KEYS = 88;
+
+        // 預先計算 88 鍵中的全音/白鍵 MIDI 列表 (長度為 52)
+        const WHITE_KEYS_MIDI = [];
+        for (let i = 0; i < NUM_KEYS; i++) {
+            const midi = START_MIDI + i;
+            const noteInOctave = midi % 12;
+            if (![1, 3, 6, 8, 10].includes(noteInOctave)) {
+                WHITE_KEYS_MIDI.push(midi);
+            }
+        }
+
+        // 琴鍵寬度動態縮放狀態
+        let whiteKeyWidth = 69;
+        const MIN_KEY_WIDTH = 30;
+        const MAX_KEY_WIDTH = 150;
+
+        const APP_MODES = [
+            { id: 'general', label: '一般和弦模式' },
+            { id: 'diatonic_triad', label: '順階三和弦模式' },
+            { id: 'diatonic_7th', label: '順階七和弦模式' },
+            { id: 'single', label: '單音模式' }
+        ];
+
+        /*
+         * 按鍵對應定義：
+         * Q組: 白鍵為 Q列, 相鄰黑鍵為 數字列
+         * Z組: 白鍵為 Z列, 相鄰黑鍵為 A列
+         */
+        const Q_WHITE_KEYS = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']'];
+        const Q_BLACK_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='];
+
+        const Z_WHITE_KEYS = ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/'];
+        const Z_BLACK_KEYS = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', "'"];
+
+        // 預設 Q組 白鍵起點：MIDI 60 (C4)，在 WHITE_KEYS_MIDI 陣列中的索引位置 (第23個白鍵)
+        const DEFAULT_Q_WHITE_BASE = WHITE_KEYS_MIDI.indexOf(60); 
+        // 預設 Z組 白鍵起點：MIDI 48 (C3)，在 WHITE_KEYS_MIDI 陣列中的索引位置 (第16個白鍵)
+        const DEFAULT_Z_WHITE_BASE = WHITE_KEYS_MIDI.indexOf(48); 
+
+        // 平移狀態 (以白鍵數量為單位)
+        let keyGroupOffsets = {
+            q: 0, 
+            z: 0  
+        };
+
+        // 動態計算當前組合後的鍵盤對應 mappings
+        let activeKeyToMidi = {};
+        let activeMidiToKeyLabel = {};
+
+        function rebuildKeyboardMapping() {
+            activeKeyToMidi = {};
+            activeMidiToKeyLabel = {};
+
+            // 輔助函式：根據「白鍵起始索引」、「白鍵按鍵陣列」、「黑鍵按鍵陣列」進行精確對應
+            function mapGroup(baseWhiteIdx, whiteKeyChars, blackKeyChars, groupTag) {
+                for (let i = 0; i < whiteKeyChars.length; i++) {
+                    const currentWIdx = baseWhiteIdx + i;
+                    if (currentWIdx < 0 || currentWIdx >= WHITE_KEYS_MIDI.length) continue;
+
+                    const currentWMidi = WHITE_KEYS_MIDI[currentWIdx];
+                    const wChar = whiteKeyChars[i];
+
+                    // 綁定白鍵
+                    activeKeyToMidi[wChar] = currentWMidi;
+                    if (!activeMidiToKeyLabel[currentWMidi]) activeMidiToKeyLabel[currentWMidi] = [];
+                    activeMidiToKeyLabel[currentWMidi].push({ key: wChar.toUpperCase(), group: groupTag });
+
+                    // 判斷下一個白鍵與當前白鍵之間是否有黑鍵 (MIDI 相差 2 代表中間夾一個黑鍵)
+                    const nextWIdx = currentWIdx + 1;
+                    if (nextWIdx < WHITE_KEYS_MIDI.length) {
+                        const nextWMidi = WHITE_KEYS_MIDI[nextWIdx];
+                        if (nextWMidi - currentWMidi === 2) {
+                            const blackMidi = currentWMidi + 1;
+                            // 相對應的黑鍵按鍵為同索引或相對位置的黑鍵（例如 q與w 之間的黑鍵對應 2即 index 1）
+                            // 根據鍵盤標準排版：第 i 個白鍵與第 i+1 個白鍵之間的黑鍵對應 blackKeyChars[i+1]
+                            const bCharIndex = i + 1;
+                            if (bCharIndex < blackKeyChars.length) {
+                                const bChar = blackKeyChars[bCharIndex];
+                                activeKeyToMidi[bChar] = blackMidi;
+                                if (!activeMidiToKeyLabel[blackMidi]) activeMidiToKeyLabel[blackMidi] = [];
+                                activeMidiToKeyLabel[blackMidi].push({ key: bChar.toUpperCase(), group: groupTag });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 1. 綁定 Q 組 (Q 列對應白鍵，數字列對應其相鄰黑鍵)
+            const qBaseIdx = DEFAULT_Q_WHITE_BASE + keyGroupOffsets.q;
+            mapGroup(qBaseIdx, Q_WHITE_KEYS, Q_BLACK_KEYS, 'q');
+
+            // 2. 綁定 Z 組 (Z 列對應白鍵，A 列對應其相鄰黑鍵)
+            const zBaseIdx = DEFAULT_Z_WHITE_BASE + keyGroupOffsets.z;
+            mapGroup(zBaseIdx, Z_WHITE_KEYS, Z_BLACK_KEYS, 'z');
+        }
+
+        // 調整 Q 組 或 Z 組 白鍵平移
+        function stepKeyOffset(group, delta) {
+            if (group === 'q') {
+                keyGroupOffsets.q = Math.max(-20, Math.min(25, keyGroupOffsets.q + delta));
+            } else if (group === 'z') {
+                keyGroupOffsets.z = Math.max(-15, Math.min(20, keyGroupOffsets.z + delta));
+            }
+            updateKeyOffsetUI();
+            rebuildKeyboardMapping();
+            renderPianoKeyboard();
+        }
+
+        function resetKeyOffset(group) {
+            keyGroupOffsets[group] = 0;
+            updateKeyOffsetUI();
+            rebuildKeyboardMapping();
+            renderPianoKeyboard();
+        }
+
+        function updateKeyOffsetUI() {
+            const qDisp = document.getElementById('qOffsetDisplay');
+            const zDisp = document.getElementById('zOffsetDisplay');
+
+            if (qDisp) {
+                const val = keyGroupOffsets.q;
+                qDisp.textContent = val > 0 ? `+${val}` : `${val}`;
+            }
+            if (zDisp) {
+                const val = keyGroupOffsets.z;
+                zDisp.textContent = val > 0 ? `+${val}` : `${val}`;
+            }
+        }
+
+        // Display & Mode state
+        let noteDisplayMode = 'sharp'; // 'sharp', 'flat', 'degree'
+        let selectedKeyRoot = 0; // 0 = C, 1 = C#, etc.
+        let transposeOffset = 0; // -12 to +12 semitones
+        let appMode = 'general'; // 'general', 'diatonic_triad', 'diatonic_7th', 'single'
+        let previousAppMode = 'general';
+        let temporaryOverrideChordId = null;
+
+        // Synthesizer parameters state
+        const synth = {
+            wave: 'triangle',
+            cutoff: 8000,
+            resonance: 1,
+            attack: 0.02,
+            decay: 0.15,
+            sustain: 0.6,
+            release: 0.25,
+            volume: 0.7
+        };
+
+        // 28 Chords flattened list
+        const ALL_CHORDS = [
+            // Major (7)
+            { id: 'maj', label: 'Major', name: '大三和弦', intervals: [0, 4, 7], theme: 'blue' },
+            { id: 'maj7', label: 'Maj7', name: '大七和弦', intervals: [0, 4, 7, 11], theme: 'blue' },
+            { id: 'maj9', label: 'Maj9', name: '大九和弦', intervals: [0, 4, 7, 11, 14], theme: 'blue' },
+            { id: '6', label: '6', name: '大六和弦', intervals: [0, 4, 7, 9], theme: 'blue' },
+            { id: '69', label: '6/9', name: '大六九和弦', intervals: [0, 4, 7, 9, 14], theme: 'blue' },
+            { id: 'add9', label: 'add9', name: '加九和弦', intervals: [0, 4, 7, 14], theme: 'blue' },
+            { id: 'add11', label: 'add11', name: '加十一和弦', intervals: [0, 4, 7, 17], theme: 'blue' },
+
+            // Minor (8)
+            { id: 'min', label: 'm', name: '小三和弦', intervals: [0, 3, 7], theme: 'purple' },
+            { id: 'm7', label: 'm7', name: '小七和弦', intervals: [0, 3, 7, 10], theme: 'purple' },
+            { id: 'm9', label: 'm9', name: '小九和弦', intervals: [0, 3, 7, 10, 14], theme: 'purple' },
+            { id: 'm6', label: 'm6', name: '小六和弦', intervals: [0, 3, 7, 9], theme: 'purple' },
+            { id: 'm69', label: 'm6/9', name: '小六九和弦', intervals: [0, 3, 7, 9, 14], theme: 'purple' },
+            { id: 'madd9', label: 'madd9', name: '小加九和弦', intervals: [0, 3, 7, 14], theme: 'purple' },
+            { id: 'madd11', label: 'madd11', name: '小加十一和弦', intervals: [0, 3, 7, 17], theme: 'purple' },
+            { id: 'mM7', label: 'mM7', name: '小大七和弦', intervals: [0, 3, 7, 11], theme: 'purple' },
+
+            // Dominant (6)
+            { id: '7', label: '7', name: '屬七和弦', intervals: [0, 4, 7, 10], theme: 'amber' },
+            { id: '9', label: '9', name: '屬九和弦', intervals: [0, 4, 7, 10, 14], theme: 'amber' },
+            { id: '7b9', label: '7♭9', name: '屬七降九和弦', intervals: [0, 4, 7, 10, 13], theme: 'amber' },
+            { id: '7s9', label: '7♯9', name: '屬七升九和弦', intervals: [0, 4, 7, 10, 15], theme: 'amber' },
+            { id: '7sus4', label: '7sus4', name: '屬七掛四和弦', intervals: [0, 5, 7, 10], theme: 'amber' },
+            { id: '7sus2', label: '7sus2', name: '屬七掛二和弦', intervals: [0, 2, 7, 10], theme: 'amber' },
+
+            // Diminished (3)
+            { id: 'dim', label: 'dim', name: '減三和弦', intervals: [0, 3, 6], theme: 'rose' },
+            { id: 'm7b5', label: 'ø7', name: '半減七和弦', intervals: [0, 3, 6, 10], theme: 'rose' },
+            { id: 'dim7', label: '°7', name: '減七和弦', intervals: [0, 3, 6, 9], theme: 'rose' },
+
+            // Suspended & Augmented (4)
+            { id: 'sus4', label: 'sus4', name: '掛四和弦', intervals: [0, 5, 7], theme: 'emerald' },
+            { id: 'sus2', label: 'sus2', name: '掛二和弦', intervals: [0, 2, 7], theme: 'emerald' },
+            { id: '5', label: '5', name: '純五度和弦', intervals: [0, 7], theme: 'emerald' },
+            { id: 'aug', label: 'aug', name: '增三和弦', intervals: [0, 4, 8], theme: 'orange' }
+        ];
+
+        let currentRootMidi = 60; // Default C4 root
+        let currentChordId = 'maj';
+        let audioCtx = null;
+        let masterGainNode = null;
+        let isAudioInitialized = false;
+        let isLocked = false;
+        
+        const activeKeyNotes = {};
+        const pressedComputerKeys = new Set();
+
+        // --- Transpose Controller ---
+        function stepTranspose(delta) {
+            transposeOffset = Math.max(-12, Math.min(12, transposeOffset + delta));
+            updateTransposeUI();
+            renderPianoKeyboard();
+        }
+
+        function updateTransposeUI() {
+            const display = document.getElementById('transposeDisplay');
+            if (display) {
+                if (transposeOffset > 0) {
+                    display.textContent = `+${transposeOffset} ♯`;
+                } else if (transposeOffset < 0) {
+                    display.textContent = `${transposeOffset} ♭`;
+                } else {
+                    display.textContent = `0 ♯`;
+                }
+            }
+        }
+
+        // --- Audio Initialization & Synthesis ---
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                masterGainNode = audioCtx.createGain();
+                masterGainNode.gain.setValueAtTime(synth.volume, audioCtx.currentTime);
+                masterGainNode.connect(audioCtx.destination);
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            isAudioInitialized = true;
+            document.getElementById('audioStatusText').textContent = '聲音已啟用';
+            document.getElementById('toggleAudioBtn').classList.remove('bg-indigo-600', 'hover:bg-indigo-500');
+            document.getElementById('toggleAudioBtn').classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+        }
+
+        function toggleAudioContext() {
+            if (!isAudioInitialized) {
+                initAudio();
+            } else {
+                if (audioCtx.state === 'running') {
+                    audioCtx.suspend();
+                    document.getElementById('audioStatusText').textContent = '聲音已停用';
+                    document.getElementById('toggleAudioBtn').classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+                    document.getElementById('toggleAudioBtn').classList.add('bg-indigo-600', 'hover:bg-indigo-500');
+                    isAudioInitialized = false;
+                } else {
+                    audioCtx.resume();
+                    document.getElementById('audioStatusText').textContent = '聲音已啟用';
+                    document.getElementById('toggleAudioBtn').classList.remove('bg-indigo-600', 'hover:bg-indigo-500');
+                    document.getElementById('toggleAudioBtn').classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+                    isAudioInitialized = true;
+                }
+            }
+        }
+
+        function createSustainedTone(freq) {
+            if (!audioCtx || audioCtx.state !== 'running') return null;
+
+            const now = audioCtx.currentTime;
+            const a = Math.max(0.005, synth.attack);
+            const d = synth.decay;
+            const sus = synth.sustain;
+
+            const osc = audioCtx.createOscillator();
+            osc.type = synth.wave;
+            osc.frequency.setValueAtTime(freq, now);
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(synth.cutoff, now);
+            filter.Q.setValueAtTime(synth.resonance, now);
+
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.3, now + a);
+            gainNode.gain.linearRampToValueAtTime(0.3 * sus, now + a + d);
+
+            osc.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(masterGainNode);
+
+            osc.start(now);
+
+            return { osc, gainNode };
+        }
+
+        function stopSustainedTone(nodeData) {
+            if (!nodeData || !nodeData.osc || !nodeData.gainNode || !audioCtx) return;
+
+            try {
+                const now = audioCtx.currentTime;
+                const r = Math.max(0.05, synth.release);
+                const gain = nodeData.gainNode.gain;
+
+                const currentGain = gain.value;
+                gain.cancelScheduledValues(now);
+                gain.setValueAtTime(currentGain, now);
+                gain.linearRampToValueAtTime(0, now + r);
+
+                nodeData.osc.stop(now + r + 0.05);
+            } catch (e) {
+                console.error("Stop tone error:", e);
+            }
+        }
+
+        function midiToFreq(midi) {
+            return 440 * Math.pow(2, (midi - 69) / 12);
+        }
+
+        // --- Mode Control & Rendering ---
+        function setAppMode(newModeId) {
+            if (newModeId === 'single' && appMode !== 'single') {
+                previousAppMode = appMode;
+            }
+            appMode = newModeId;
+            temporaryOverrideChordId = null;
+            renderModeButtons();
+            renderChordButtons();
+            updatePianoHighlights();
+        }
+
+        function cycleMode(direction) {
+            const modeIds = APP_MODES.map(m => m.id);
+            let currentIndex = modeIds.indexOf(appMode);
+            currentIndex = (currentIndex + direction + modeIds.length) % modeIds.length;
+            setAppMode(modeIds[currentIndex]);
+        }
+
+        function renderModeButtons() {
+            const container = document.getElementById('modeButtonsContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            APP_MODES.forEach(mode => {
+                const isActive = appMode === mode.id;
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150 active:scale-95 flex items-center space-x-1 ${
+                    isActive 
+                        ? 'bg-indigo-600 border-indigo-400 text-white shadow-md shadow-indigo-600/30 font-bold scale-[1.02]' 
+                        : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-700 hover:text-white'
+                }`;
+                btn.textContent = mode.label;
+                btn.onclick = () => setAppMode(mode.id);
+                container.appendChild(btn);
+            });
+        }
+
+        // --- Piano Trigger Helper Functions ---
+        function triggerPianoKeyDown(midiNote) {
+            currentRootMidi = midiNote;
+
+            if (!isAudioInitialized) {
+                initAudio();
+            }
+
+            updatePianoHighlights();
+
+            if (activeKeyNotes[midiNote]) return;
+
+            const intervals = getChordIntervalsForMidi(midiNote);
+
+            const nodes = [];
+            intervals.forEach((interval) => {
+                const noteMidi = midiNote + transposeOffset + interval;
+                if (noteMidi >= 21 && noteMidi <= 108) {
+                    const freq = midiToFreq(noteMidi);
+                    const nodeObj = createSustainedTone(freq);
+                    if (nodeObj) nodes.push(nodeObj);
+                }
+            });
+            activeKeyNotes[midiNote] = nodes;
+
+            if (temporaryOverrideChordId !== null && appMode !== 'general') {
+                temporaryOverrideChordId = null;
+                renderChordButtons();
+            }
+        }
+
+        function triggerPianoKeyUp(midiNote) {
+            if (activeKeyNotes[midiNote]) {
+                activeKeyNotes[midiNote].forEach(node => stopSustainedTone(node));
+                delete activeKeyNotes[midiNote];
+            }
+        }
+
+        // --- Music Theory & Interval Calculations ---
+        function getNoteLabel(noteInOctave) {
+            if (noteDisplayMode === 'sharp') {
+                return NOTES_SHARP[noteInOctave];
+            } else if (noteDisplayMode === 'flat') {
+                return NOTES_FLAT[noteInOctave];
+            } else {
+                const diff = (noteInOctave - selectedKeyRoot + 12) % 12;
+                return DEGREE_NAMES[diff];
+            }
+        }
+
+        function getChordIntervalsForMidi(midiNote) {
+            if (appMode === 'single') {
+                return [0];
+            }
+
+            if ((appMode === 'diatonic_triad' || appMode === 'diatonic_7th') && temporaryOverrideChordId !== null) {
+                const overrideChordObj = ALL_CHORDS.find(c => c.id === temporaryOverrideChordId);
+                if (overrideChordObj) {
+                    return overrideChordObj.intervals;
+                }
+            }
+
+            if (appMode === 'general') {
+                const chordObj = ALL_CHORDS.find(c => c.id === currentChordId) || ALL_CHORDS[0];
+                return chordObj.intervals;
+            }
+
+            const soundingMidi = midiNote + transposeOffset;
+            const noteInOctave = (soundingMidi % 12 + 12) % 12;
+            const intervalFromKey = (noteInOctave - selectedKeyRoot + 12) % 12;
+
+            if (appMode === 'diatonic_triad') {
+                const triadMap = {
+                    0: [0, 4, 7],   // I
+                    1: [0, 4, 7],   // ♭II
+                    2: [0, 3, 7],   // ii
+                    3: [0, 3, 7],   // ♭III
+                    4: [0, 3, 7],   // iii
+                    5: [0, 4, 7],   // IV
+                    6: [0, 3, 6],   // ♭V
+                    7: [0, 4, 7],   // V
+                    8: [0, 4, 7],   // ♭VI
+                    9: [0, 3, 7],   // vi
+                    10: [0, 4, 7],  // ♭VII
+                    11: [0, 3, 6]   // vii°
+                };
+                return triadMap[intervalFromKey] || [0, 4, 7];
+            } else if (appMode === 'diatonic_7th') {
+                const seventhMap = {
+                    0: [0, 4, 7, 11],  // I (Maj7)
+                    1: [0, 4, 7, 10],  // ♭II (7)
+                    2: [0, 3, 7, 10],  // ii (m7)
+                    3: [0, 3, 7, 10],  // ♭III (m7)
+                    4: [0, 3, 7, 10],  // iii (m7)
+                    5: [0, 4, 7, 11],  // IV (Maj7)
+                    6: [0, 3, 6, 10],  // ♭V (m7♭5)
+                    7: [0, 4, 7, 10],  // V (7)
+                    8: [0, 4, 7, 11],  // ♭VI (Maj7)
+                    9: [0, 3, 7, 10],  // vi (m7)
+                    10: [0, 4, 7, 10], // ♭VII (7)
+                    11: [0, 3, 6, 10]  // vii° (m7♭5)
+                };
+                return seventhMap[intervalFromKey] || [0, 4, 7, 10];
+            }
+            return [0, 4, 7];
+        }
+
+        // --- UI Rendering ---
+        function renderChordButtons() {
+            const container = document.getElementById('chordGridContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            ALL_CHORDS.forEach(chord => {
+                const activeId = (appMode === 'general') ? currentChordId : temporaryOverrideChordId;
+                const isSelected = (activeId !== null && chord.id === activeId);
+                const btn = document.createElement('button');
+
+                let colorClasses = '';
+                if (chord.theme === 'blue') {
+                    colorClasses = isSelected ? 'bg-blue-600 border-blue-400 text-white scale-[1.02]' : 'bg-blue-950/40 border-blue-900/60 hover:bg-blue-900/60 text-blue-200 hover:border-blue-700';
+                } else if (chord.theme === 'purple') {
+                    colorClasses = isSelected ? 'bg-purple-600 border-purple-400 text-white scale-[1.02]' : 'bg-purple-950/40 border-purple-900/60 hover:bg-purple-900/60 text-purple-200 hover:border-purple-700';
+                } else if (chord.theme === 'amber') {
+                    colorClasses = isSelected ? 'bg-amber-600 border-amber-400 text-white scale-[1.02]' : 'bg-amber-950/40 border-amber-900/60 hover:bg-amber-900/60 text-amber-200 hover:border-amber-700';
+                } else if (chord.theme === 'rose') {
+                    colorClasses = isSelected ? 'bg-rose-600 border-rose-400 text-white scale-[1.02]' : 'bg-rose-950/40 border-rose-900/60 hover:bg-rose-900/60 text-rose-200 hover:border-rose-700';
+                } else if (chord.theme === 'emerald') {
+                    colorClasses = isSelected ? 'bg-emerald-600 border-emerald-400 text-white scale-[1.02]' : 'bg-emerald-950/40 border-emerald-900/60 hover:bg-emerald-900/60 text-emerald-200 hover:border-emerald-700';
+                } else if (chord.theme === 'orange') {
+                    colorClasses = isSelected ? 'bg-orange-600 border-orange-400 text-white scale-[1.02]' : 'bg-orange-950/40 border-orange-900/60 hover:bg-orange-900/60 text-orange-200 hover:border-orange-700';
+                }
+
+                btn.className = `no-touch-action flex flex-col items-center justify-center p-1.5 rounded-lg border transition-all duration-200 group relative overflow-hidden ${colorClasses}`;
+                btn.setAttribute('data-chord-id', chord.id);
+                btn.addEventListener('contextmenu', (e) => e.preventDefault());
+                
+                btn.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    try { btn.setPointerCapture(e.pointerId); } catch (err) {}
+                    selectChord(chord.id);
+                });
+
+                btn.innerHTML = `
+                    <div class="text-xs sm:text-sm font-bold tracking-wide">${chord.label}</div>
+                    <div class="text-[9px] opacity-75 mt-0.5 truncate max-w-full">${chord.name}</div>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function selectChord(chordId) {
+            if (appMode === 'general') {
+                currentChordId = chordId;
+                renderChordButtons();
+                updatePianoHighlights();
+            } else {
+                temporaryOverrideChordId = chordId;
+                renderChordButtons();
+            }
+        }
+
+        function getKeyboardHintHTML(midi, isBlack) {
+            const mappedLabels = activeMidiToKeyLabel[midi];
+            if (!mappedLabels || mappedLabels.length === 0) return '';
+
+            const badgeSpans = mappedLabels.map(item => {
+                if (item.group === 'q') {
+                    return `<span class="text-[9px] font-mono font-bold text-indigo-300 bg-indigo-950/80 border border-indigo-500/50 px-1 rounded mb-0.5 inline-block">${item.key}</span>`;
+                } else {
+                    return `<span class="text-[9px] font-mono font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/50 px-1 rounded mb-0.5 inline-block">${item.key}</span>`;
+                }
+            }).join('');
+
+            return `<div class="flex flex-col items-center gap-0.5">${badgeSpans}</div>`;
+        }
+
+        function renderPianoKeyboard() {
+            const container = document.getElementById('pianoKeyboard');
+            container.innerHTML = '';
+
+            const keys = [];
+            for (let i = 0; i < NUM_KEYS; i++) {
+                const physicalMidi = START_MIDI + i;
+                const soundingMidi = physicalMidi + transposeOffset;
+                const noteInOctave = (soundingMidi % 12 + 12) % 12;
+                const octave = Math.floor(soundingMidi / 12) - 1;
+                
+                const physicalNoteInOctave = physicalMidi % 12;
+                const isBlack = [1, 3, 6, 8, 10].includes(physicalNoteInOctave);
+                const noteLabel = getNoteLabel(noteInOctave);
+
+                keys.push({ midi: physicalMidi, soundingMidi, noteInOctave, octave, isBlack, noteLabel });
+            }
+
+            const whiteKeys = keys.filter(k => !k.isBlack);
+            const whiteKeysContainer = document.createElement('div');
+            whiteKeysContainer.className = 'flex relative z-10';
+
+            const blackKeyWidth = Math.round(whiteKeyWidth * (36 / 69));
+
+            whiteKeys.forEach((wk) => {
+                const keyEl = document.createElement('div');
+                keyEl.className = `piano-key h-48 rounded-b-lg border border-slate-300 flex flex-col justify-end items-center pb-2.5 cursor-pointer transition-colors duration-150 select-none relative bg-white hover:bg-slate-100 text-slate-700`;
+                keyEl.style.width = `${whiteKeyWidth}px`;
+                keyEl.setAttribute('data-midi', wk.midi);
+                
+                const kbdHint = getKeyboardHintHTML(wk.midi, false);
+
+                keyEl.innerHTML = `
+                    ${kbdHint}
+                    <span class="note-label text-xs font-semibold opacity-60">${wk.noteLabel}</span>
+                    <span class="note-octave text-[10px] opacity-40">${wk.octave}</span>
+                `;
+
+                bindKeyEvents(keyEl, wk.midi);
+                whiteKeysContainer.appendChild(keyEl);
+            });
+
+            container.appendChild(whiteKeysContainer);
+
+            let currentWhitePos = 0;
+            keys.forEach((k) => {
+                if (!k.isBlack) {
+                    currentWhitePos += whiteKeyWidth;
+                } else {
+                    const leftPos = currentWhitePos - Math.round(blackKeyWidth / 2);
+                    const blackKeyEl = document.createElement('div');
+                    blackKeyEl.className = `piano-key absolute h-28 rounded-b-md border flex flex-col justify-end items-center pb-2 cursor-pointer transition-colors duration-150 select-none z-20 bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700`;
+                    blackKeyEl.style.width = `${blackKeyWidth}px`;
+                    blackKeyEl.style.left = `${leftPos}px`;
+                    blackKeyEl.style.top = '0px';
+                    blackKeyEl.setAttribute('data-midi', k.midi);
+
+                    const kbdHint = getKeyboardHintHTML(k.midi, true);
+
+                    blackKeyEl.innerHTML = `
+                        ${kbdHint}
+                        <span class="note-label text-[10px] opacity-90">${k.noteLabel}</span>
+                    `;
+
+                    bindKeyEvents(blackKeyEl, k.midi);
+                    container.appendChild(blackKeyEl);
+                }
+            });
+
+            updatePianoHighlights();
+
+            setTimeout(() => {
+                const topScrollContent = document.getElementById('topScrollContent');
+                if (topScrollContent && container) {
+                    topScrollContent.style.width = container.offsetWidth + 'px';
+                }
+            }, 50);
+        }
+
+        function updatePianoHighlights() {
+            const effectiveRootMidi = currentRootMidi + transposeOffset;
+            const activeIntervals = getChordIntervalsForMidi(currentRootMidi);
+            const chordMidiNotes = activeIntervals.map(interval => effectiveRootMidi + interval);
+
+            const keyElements = document.querySelectorAll('.piano-key');
+            keyElements.forEach(el => {
+                const physicalMidi = parseInt(el.getAttribute('data-midi'), 10);
+                const soundingMidi = physicalMidi + transposeOffset;
+                const noteInOctave = (soundingMidi % 12 + 12) % 12;
+                const octave = Math.floor(soundingMidi / 12) - 1;
+                const physicalNoteInOctave = physicalMidi % 12;
+                const isBlack = [1, 3, 6, 8, 10].includes(physicalNoteInOctave);
+                const noteLabel = getNoteLabel(noteInOctave);
+
+                const isRoot = (soundingMidi === effectiveRootMidi);
+                const isExactChordTone = chordMidiNotes.includes(soundingMidi);
+
+                const labelSpan = el.querySelector('.note-label');
+                if (labelSpan) labelSpan.textContent = noteLabel;
+
+                const octaveSpan = el.querySelector('.note-octave');
+                if (octaveSpan) octaveSpan.textContent = octave;
+
+                const blackKeyWidth = Math.round(whiteKeyWidth * (36 / 69));
+
+                if (!isBlack) {
+                    el.className = `piano-key h-48 rounded-b-lg border border-slate-300 flex flex-col justify-end items-center pb-2.5 cursor-pointer transition-colors duration-150 select-none relative `;
+                    el.style.width = `${whiteKeyWidth}px`;
+                    if (isRoot) {
+                        el.className += `bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold`;
+                    } else if (isExactChordTone) {
+                        el.className += `bg-indigo-400 hover:bg-indigo-300 text-slate-950 font-bold`;
+                    } else {
+                        el.className += `bg-white hover:bg-slate-100 text-slate-700`;
+                    }
+                } else {
+                    el.className = `piano-key absolute h-28 rounded-b-md border flex flex-col justify-end items-center pb-2 cursor-pointer transition-colors duration-150 select-none z-20 `;
+                    el.style.width = `${blackKeyWidth}px`;
+                    if (isRoot) {
+                        el.className += `bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold border-amber-300`;
+                    } else if (isExactChordTone) {
+                        el.className += `bg-indigo-500 hover:bg-indigo-400 text-white font-bold border-indigo-300`;
+                    } else {
+                        el.className += `bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700`;
+                    }
+                }
+            });
+        }
+
+        function bindKeyEvents(element, midiNote) {
+            element.addEventListener('contextmenu', (e) => e.preventDefault());
+
+            element.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                try { element.setPointerCapture(e.pointerId); } catch (err) {}
+                triggerPianoKeyDown(midiNote);
+            });
+
+            const stopAction = (e) => {
+                e.preventDefault();
+                try {
+                    if (element.hasPointerCapture(e.pointerId)) {
+                        element.releasePointerCapture(e.pointerId);
+                    }
+                } catch (err) {}
+                triggerPianoKeyUp(midiNote);
+            };
+
+            element.addEventListener('pointerup', stopAction);
+            element.addEventListener('pointercancel', stopAction);
+            element.addEventListener('pointerleave', stopAction);
+        }
+
+        // --- Keyboard Event Listeners ---
+        window.addEventListener('keydown', (e) => {
+            if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+            // 空白鍵切換單音模式與返回上一個模式
+            if (e.key === ' ') {
+                e.preventDefault();
+                if (appMode === 'single') {
+                    setAppMode(previousAppMode);
+                } else {
+                    setAppMode('single');
+                }
+                return;
+            }
+
+            // 左右方向鍵循環切換模式
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                cycleMode(-1);
+                return;
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                cycleMode(1);
+                return;
+            }
+            
+            const key = e.key.toLowerCase();
+            if (activeKeyToMidi[key] !== undefined && !pressedComputerKeys.has(key)) {
+                pressedComputerKeys.add(key);
+                const midi = activeKeyToMidi[key];
+                triggerPianoKeyDown(midi);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (activeKeyToMidi[key] !== undefined) {
+                pressedComputerKeys.delete(key);
+                const midi = activeKeyToMidi[key];
+                triggerPianoKeyUp(midi);
+            }
+        });
+
+        // --- Toolbar Controls ---
+        const noteDisplaySelect = document.getElementById('noteDisplaySelect');
+        const keyRootSelect = document.getElementById('keyRootSelect');
+
+        noteDisplaySelect.addEventListener('change', (e) => {
+            noteDisplayMode = e.target.value;
+            updatePianoHighlights();
+        });
+
+        keyRootSelect.addEventListener('change', (e) => {
+            selectedKeyRoot = parseInt(e.target.value, 10);
+            updatePianoHighlights();
+        });
+
+        // --- Synchronized Scrollbars Setup ---
+        const topScroll = document.getElementById('topScrollContainer');
+        const pianoScroll = document.getElementById('pianoScrollWrapper');
+        let isSyncing = false;
+
+        topScroll.addEventListener('scroll', () => {
+            if (isLocked || isSyncing) return;
+            isSyncing = true;
+            pianoScroll.scrollLeft = topScroll.scrollLeft;
+            isSyncing = false;
+        });
+
+        pianoScroll.addEventListener('scroll', () => {
+            if (isLocked || isSyncing) return;
+            isSyncing = true;
+            topScroll.scrollLeft = pianoScroll.scrollLeft;
+            isSyncing = false;
+        });
+
+        [topScroll, pianoScroll].forEach(container => {
+            container.addEventListener('wheel', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    
+                    const rect = pianoScroll.getBoundingClientRect();
+                    const cursorX = e.clientX - rect.left + pianoScroll.scrollLeft;
+                    const oldScrollWidth = pianoScroll.scrollWidth;
+
+                    const delta = e.deltaY < 0 ? 4 : -4;
+                    const newWidth = Math.max(MIN_KEY_WIDTH, Math.min(MAX_KEY_WIDTH, whiteKeyWidth + delta));
+                    
+                    if (newWidth !== whiteKeyWidth) {
+                        whiteKeyWidth = newWidth;
+                        renderPianoKeyboard();
+
+                        const newScrollWidth = pianoScroll.scrollWidth;
+                        const ratio = newScrollWidth / oldScrollWidth;
+                        pianoScroll.scrollLeft = cursorX * ratio - (e.clientX - rect.left);
+                        topScroll.scrollLeft = pianoScroll.scrollLeft;
+                    }
+                    return;
+                }
+
+                if (isLocked) return;
+                e.preventDefault();
+                const delta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+                pianoScroll.scrollLeft += delta;
+            }, { passive: false });
+        });
+
+        function toggleLockScroll() {
+            isLocked = !isLocked;
+            const lockBtn = document.getElementById('toggleLockBtn');
+            const lockIcon = document.getElementById('lockIcon');
+            const lockStatusText = document.getElementById('lockStatusText');
+
+            if (isLocked) {
+                lockIcon.textContent = '🔒';
+                lockStatusText.textContent = '已鎖定';
+                lockBtn.classList.remove('bg-slate-800', 'hover:bg-slate-700', 'border-slate-700');
+                lockBtn.classList.add('bg-amber-600', 'hover:bg-amber-500', 'border-amber-500', 'text-white');
+                topScroll.classList.add('locked-scroll');
+                pianoScroll.classList.add('locked-scroll');
+            } else {
+                lockIcon.textContent = '🔓';
+                lockStatusText.textContent = '解鎖';
+                lockBtn.classList.remove('bg-amber-600', 'hover:bg-amber-500', 'border-amber-500', 'text-white');
+                lockBtn.classList.add('bg-slate-800', 'hover:bg-slate-700', 'border-slate-700');
+                topScroll.classList.remove('locked-scroll');
+                pianoScroll.classList.remove('locked-scroll');
+            }
+        }
+
+        // --- Master Volume Control ---
+        const masterVolumeInput = document.getElementById('masterVolume');
+        const masterVolumeValSpan = document.getElementById('masterVolumeVal');
+
+        masterVolumeInput.addEventListener('input', (e) => {
+            synth.volume = parseFloat(e.target.value);
+            masterVolumeValSpan.textContent = synth.volume.toFixed(2);
+            if (masterGainNode && audioCtx) {
+                masterGainNode.gain.setValueAtTime(synth.volume, audioCtx.currentTime);
+            }
+        });
+
+        masterVolumeInput.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            let val = parseFloat(masterVolumeInput.value) + (e.deltaY < 0 ? 0.05 : -0.05);
+            val = Math.max(0, Math.min(1, val));
+            masterVolumeInput.value = val.toFixed(2);
+            synth.volume = val;
+            masterVolumeValSpan.textContent = val.toFixed(2);
+            if (masterGainNode && audioCtx) {
+                masterGainNode.gain.setValueAtTime(synth.volume, audioCtx.currentTime);
+            }
+        }, { passive: false });
+
+        // --- Synthesizer Popover Logic ---
+        const synthPopover = document.getElementById('synthPopover');
+        const toggleSynthBtn = document.getElementById('toggleSynthBtn');
+        const closeSynth = document.getElementById('closeSynth');
+
+        function openSynthPanel() {
+            const isOpen = synthPopover.classList.toggle('open');
+            if (isOpen) {
+                const rect = toggleSynthBtn.getBoundingClientRect();
+                synthPopover.style.top = (rect.bottom + 8) + 'px';
+                synthPopover.style.left = Math.max(10, rect.left - 150) + 'px';
+            }
+        }
+
+        function closeSynthPanel() {
+            synthPopover.classList.remove('open');
+        }
+
+        toggleSynthBtn.onclick = (e) => {
+            e.stopPropagation();
+            openSynthPanel();
+        };
+
+        closeSynth.onclick = closeSynthPanel;
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeSynthPanel();
+            }
+        });
+
+        const synthDragbar = document.getElementById('synthDragbar');
+        let isPopoverDragging = false;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        synthDragbar.addEventListener('mousedown', (e) => {
+            isPopoverDragging = true;
+            const rect = synthPopover.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isPopoverDragging) return;
+            let newX = e.clientX - dragOffsetX;
+            let newY = e.clientY - dragOffsetY;
+
+            const panelWidth = synthPopover.offsetWidth;
+            const dragbarHeight = synthDragbar.offsetHeight || 30;
+
+            newY = Math.max(0, Math.min(newY, window.innerHeight - dragbarHeight));
+            const minVisible = 60;
+            newX = Math.max(-panelWidth + minVisible, Math.min(newX, window.innerWidth - minVisible));
+
+            synthPopover.style.left = newX + 'px';
+            synthPopover.style.top = newY + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isPopoverDragging = false;
+        });
+
+        document.getElementById('synthWave').addEventListener('change', (e) => {
+            synth.wave = e.target.value;
+        });
+
+        ['Cutoff', 'Resonance', 'Attack', 'Decay', 'Sustain', 'Release'].forEach(k => {
+            const key = k[0].toLowerCase() + k.slice(1);
+            const input = document.getElementById('synth' + k);
+            const valSpan = document.getElementById('synth' + k + 'Val');
+
+            input.addEventListener('input', (e) => {
+                synth[key] = parseFloat(e.target.value);
+                valSpan.textContent = e.target.value;
+            });
+
+            input.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const step = parseFloat(input.step) || 1;
+                const min = parseFloat(input.min) || 0;
+                const max = parseFloat(input.max) || 100;
+                
+                let val = parseFloat(input.value) + (e.deltaY < 0 ? step : -step);
+                val = Math.max(min, Math.min(max, val));
+
+                const decimals = (step.toString().split('.')[1] || '').length;
+                input.value = decimals > 0 ? val.toFixed(decimals) : val;
+
+                synth[key] = parseFloat(input.value);
+                valSpan.textContent = input.value;
+            }, { passive: false });
+        });
+
+        window.onload = function() {
+            rebuildKeyboardMapping();
+            renderModeButtons();
+            renderChordButtons();
+            renderPianoKeyboard();
+            setTimeout(() => {
+                const targetScroll = 1350;
+                pianoScroll.scrollLeft = targetScroll;
+                topScroll.scrollLeft = targetScroll;
+            }, 100);
+        };
+    </script>
+</body>
+</html>
